@@ -3,6 +3,10 @@ require "test_helper"
 class IntrospectionTest < Minitest::Spec
 
   describe "Introspect::Graph" do
+    describe "serves cached graph for given activity when called multiple times" do
+      it { expect(Activity::Introspect::Graph(nested_activity)).must_equal(Activity::Introspect::Graph(nested_activity)) }
+    end
+
     let(:graph) { Activity::Introspect::Graph(nested_activity) }
 
     describe "#find" do

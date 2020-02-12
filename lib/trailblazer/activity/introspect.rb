@@ -4,8 +4,24 @@ module Trailblazer
     # It abstracts internals about circuits and provides a convenient API to third-parties such as
     # tracing, rendering an activity, or finding particular tasks.
     module Introspect
-      def self.Graph(*args)
-        Graph.new(*args)
+      def self.Graph(activity)
+        GraphRegistry.instance.for(activity)
+      end
+
+      # This class holds cache/registry of `Graph` objects for given activities in
+      # a thread safe manner.
+      class GraphRegistry
+        def self.instance
+          Thread.current[self.name] ||= new
+        end
+
+        def initialize
+          @registry = {}
+        end
+
+        def for(activity)
+          @registry[activity] ||= Graph.new(activity)
+        end
       end
 
       # TODO: order of step/fail/pass in Node would be cool to have
@@ -18,6 +34,8 @@ module Trailblazer
           @circuit  = @schema[:circuit]
           @map      = @circuit.to_h[:map]
           @configs  = @schema[:nodes]
+
+          @nodes    = @configs.inject({}){ |nodes, node| nodes.merge(node.id => node) }
         end
 
         def find(id=nil, &block)
@@ -36,7 +54,7 @@ module Trailblazer
         private
 
         def find_by_id(id)
-          node = @configs.find { |node| node.id == id } or return
+          node = @nodes[id] or return
           node_for(node)
         end
 
